@@ -115,6 +115,7 @@ print_quality_report(X_test_raw, "BAĞIMSIZ TEST SETİ (TEST)")
 
 #2.Betimsel İstatistikler ve Sınıf Dağılımı + log dönüsümü öncesi ve sonrası
 # 1. CLASS DAĞILIMI (Sayı, Yüzde ve Dengesizlik Oranı)
+# 1. SINIF DAĞILIMI (Sayı, Yüzde ve Dengesizlik Oranı)
 train_counts = y_train.value_counts()
 test_counts = y_test.value_counts()
 train_pct = y_train.value_counts(normalize=True) * 100
@@ -133,16 +134,14 @@ print(class_dist)
 print(f"Eğitim ALL/AML Dengesizlik Oranı : {train_counts['ALL'] / train_counts['AML']:.2f}:1")
 print(f"Test ALL/AML Dengesizlik Oranı   : {test_counts['ALL'] / test_counts['AML']:.2f}:1")
 
-# 2. KIRPMA (CLIPPING) VE LOG2 DÖNÜŞÜMÜ
-# Not: Golub literatüründe alt sınır 100 (veya tercihine göre 20), üst sınır 16000 kullanılır.
-def clip_and_log2(df, lower=100, upper=16000):
-    df_clipped = df.clip(lower=lower, upper=upper)
-    return np.log2(df_clipped)
+# 2. KIRPMA (CLIPPING - LOG2 ÖNCESİ) VE LOG2 DÖNÜŞÜMÜ (Ayrı ayrı kaydediyoruz)
+X_train_clipped = X_train_raw.clip(lower=100, upper=16000)
+X_test_clipped = X_test_raw.clip(lower=100, upper=16000)
 
-X_train_log2 = clip_and_log2(X_train_raw, lower=100, upper=16000)
-X_test_log2 = clip_and_log2(X_test_raw, lower=100, upper=16000)
+X_train_log2 = np.log2(X_train_clipped)
+X_test_log2 = np.log2(X_test_clipped)
 
-# 3. BETİMSEL İSTATİSTİKLER TABLOSU (Dönüşüm Öncesi vs Sonrası)
+# 3. BETİMSEL İSTATİSTİKLER TABLOSU (Ham vs Kırpılmış vs Log2)
 def get_descriptive_summary(df, label):
     vals = df.values.ravel()
     q25, q50, q75 = np.percentile(vals, [25, 50, 75])
@@ -161,46 +160,57 @@ def get_descriptive_summary(df, label):
     }, name=label)
 
 desc_table = pd.concat([
-    get_descriptive_summary(X_train_raw, 'Train - Ham (Raw)'),
-    get_descriptive_summary(X_train_log2, 'Train - Log2'),
-    get_descriptive_summary(X_test_raw, 'Test - Ham (Raw)'),
-    get_descriptive_summary(X_test_log2, 'Test - Log2')
+    get_descriptive_summary(X_train_raw, '1. Train - Ham (Raw)'),
+    get_descriptive_summary(X_train_clipped, '2. Train - Kırpılmış (Log2 Öncesi)'),
+    get_descriptive_summary(X_train_log2, '3. Train - Log2 Sonrası'),
+    get_descriptive_summary(X_test_raw, '4. Test - Ham (Raw)'),
+    get_descriptive_summary(X_test_log2, '5. Test - Log2 Sonrası')
 ], axis=1).round(2)
 
-print("\n--- 2. BETİMSEL İSTATİSTİKLER (HAM vs LOG2 DÖNÜŞÜMÜ) ---")
+print("\n--- 2. BETİMSEL İSTATİSTİKLER (HAM vs KIRPILMIŞ vs LOG2) ---")
 print(desc_table)
 
-# 4. GÖRSELLEŞTİRME: Sınıf Dağılımı + Ham vs Log2 İfade Dağılımı
-fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+# 4. GÖRSELLEŞTİRME (2x2 Panel, 300 DPI):
+# Panel 1: Sınıf Dağılımı | Panel 2: Ham Veri | Panel 3: Log2 Öncesi (Kırpılmış) | Panel 4: Log2 Sonrası
+fig, axes = plt.subplots(2, 2, figsize=(16, 11), dpi=300)
 
-# Grafik 1: Sınıf Dağılımı
+# Grafik 1 (Sol Üst): Sınıf Dağılımı
 class_dist.drop('Toplam')[['Eğitim Sayı (n=38)', 'Test Sayı (n=34)']].T.plot(
-    kind='bar', stacked=False, ax=axes[0], color=['#2b5c8f', '#d95f02'], rot=0
+    kind='bar', stacked=False, ax=axes[0, 0], color=['#2b5c8f', '#d95f02'], rot=0
 )
-axes[0].set_title("Eğitim ve Test Seti Sınıf Dağılımı (ALL vs AML)")
-axes[0].set_ylabel("Hasta Sayısı")
-axes[0].grid(axis='y', linestyle='--', alpha=0.5)
+axes[0, 0].set_title("1. Eğitim ve Test Seti Sınıf Dağılımı (ALL vs AML)", fontweight='bold')
+axes[0, 0].set_ylabel("Hasta Sayısı")
+axes[0, 0].grid(axis='y', linestyle='--', alpha=0.5)
 
-# Grafik 2: Ham Veri Dağılımı (Ortalama ve Medyan çizgileriyle)
+# Grafik 2 (Sağ Üst): Ham Veri Dağılımı (Negatif ve Aşırı Uç Değerli)
 raw_vals = X_train_raw.values.ravel()
-sns.histplot(raw_vals, bins=100, ax=axes[1], color='crimson', stat='density')
-axes[1].axvline(np.mean(raw_vals), color='black', linestyle='--', label=f"Ortalama: {np.mean(raw_vals):.0f}")
-axes[1].axvline(np.median(raw_vals), color='gold', linestyle='-', label=f"Medyan: {np.median(raw_vals):.0f}")
-axes[1].set_title("Ham Gen İfade Dağılımı (Aşırı Sağa Çarpık)")
-axes[1].set_xlabel("Floresan Yoğunluğu")
-axes[1].legend()
+sns.histplot(raw_vals, bins=100, ax=axes[0, 1], color='crimson', stat='density')
+axes[0, 1].axvline(np.mean(raw_vals), color='black', linestyle='--', label=f"Ortalama: {np.mean(raw_vals):.0f}")
+axes[0, 1].axvline(np.median(raw_vals), color='gold', linestyle='-', label=f"Medyan: {np.median(raw_vals):.0f}")
+axes[0, 1].set_title("2. Ham Gen İfade Dağılımı (Negatif ve Uç Değerler Dahil)", fontweight='bold')
+axes[0, 1].set_xlabel("Ham Floresan Yoğunluğu")
+axes[0, 1].legend()
 
-# Grafik 3: Log2 Dönüşümü Sonrası Dağılım
+# Grafik 3 (Sol Alt): Kırpılmış [100-16.000] ama Log2 ÖNCESİ Dağılım
+clipped_vals = X_train_clipped.values.ravel()
+sns.histplot(clipped_vals, bins=80, ax=axes[1, 0], color='darkorange', stat='density')
+axes[1, 0].axvline(np.mean(clipped_vals), color='black', linestyle='--', label=f"Ortalama: {np.mean(clipped_vals):.0f}")
+axes[1, 0].axvline(np.median(clipped_vals), color='blue', linestyle='-', label=f"Medyan: {np.median(clipped_vals):.0f}")
+axes[1, 0].set_title("3. Log2 Öncesi: Kırpılmış [100 - 16.000] Doğrusal Dağılım", fontweight='bold')
+axes[1, 0].set_xlabel("Kırpılmış Floresan Yoğunluğu (Doğrusal Ölçek)")
+axes[1, 0].legend()
+
+# Grafik 4 (Sağ Alt): Log2 Dönüşümü SONRASI Dağılım
 log_vals = X_train_log2.values.ravel()
-sns.histplot(log_vals, bins=60, ax=axes[2], color='teal', stat='density')
-axes[2].axvline(np.mean(log_vals), color='black', linestyle='--', label=f"Ortalama: {np.mean(log_vals):.2f}")
-axes[2].axvline(np.median(log_vals), color='gold', linestyle='-', label=f"Medyan: {np.median(log_vals):.2f}")
-axes[2].set_title("Kırpma [100-16.000] ve Log2 Dönüşümü Sonrası")
-axes[2].set_xlabel("Log2(İfade Değeri)")
-axes[2].legend()
+sns.histplot(log_vals, bins=60, ax=axes[1, 1], color='teal', stat='density')
+axes[1, 1].axvline(np.mean(log_vals), color='black', linestyle='--', label=f"Ortalama: {np.mean(log_vals):.2f}")
+axes[1, 1].axvline(np.median(log_vals), color='gold', linestyle='-', label=f"Medyan: {np.median(log_vals):.2f}")
+axes[1, 1].set_title("4. Log2 Sonrası: Kırpma [100 - 16.000] + Log2 Dağılımı", fontweight='bold')
+axes[1, 1].set_xlabel("Log2(İfade Değeri)")
+axes[1, 1].legend()
 
 plt.tight_layout()
-plt.savefig("golub_sinif_ve_log2_dagilimi.png", dpi=300, bbox_inches='tight')
+plt.savefig("golub_on_isleme_ve_log2_karsilastirma_300dpi.png", dpi=300, bbox_inches='tight')
 plt.show()
 
 #3.Boyut indirgeme ile görselleştirme: PCA (açıklanan varyans dahil), t-SNE veya UMAP. 
@@ -363,4 +373,165 @@ plt.tight_layout(pad=2.5)
 plt.subplots_adjust(hspace=0.32, wspace=0.25)
 
 plt.savefig("golub_pca_tsne_umap_300dpi.png", dpi=300, bbox_inches='tight')
+plt.show()
+#4 Ayırt edici genler: sınıflar arası testler, en iyi 20–50 gen için ısı haritası ve hiyerarşik kümeleme gibi veri analitiği plot örnekleri.
+# 1. SADECE EĞİTİM SETİ ÜZERİNDEN ÖZELLİK SEÇİMİ (Data Leakage Önleme)
+train_all_mask = (y_train == 'ALL').values
+train_aml_mask = (y_train == 'AML').values
+
+# Signal-to-Noise Ratio (SNR) veya Welch's t-test ile genlerin ayırt edicilik skoru
+mean_all = X_train_log2.loc[train_all_mask].mean(axis=0)
+mean_aml = X_train_log2.loc[train_aml_mask].mean(axis=0)
+std_all = X_train_log2.loc[train_all_mask].std(axis=0)
+std_aml = X_train_log2.loc[train_aml_mask].std(axis=0)
+
+# SNR Formülü: (Ort_ALL - Ort_AML) / (Std_ALL + Std_AML)
+snr_scores = (mean_all - mean_aml) / (std_all + std_aml + 1e-8)
+
+# En yüksek mutlak SNR skoruna sahip ilk 40 geni seçiyoruz
+top_40_genes = snr_scores.abs().nlargest(40).index
+
+print(f"\n--- 1. AYIRT EDİCİ GEN SEÇİMİ ---")
+print(f"Seçilen En İyi 40 Genin Accession Numaraları (İlk 40): {top_40_genes[:40].tolist()}")
+
+# Seçilen 40 geni eğitim ve test matrislerinden filtreleme
+X_train_top40 = X_train_log2[top_40_genes]
+X_test_top40 = X_test_log2[top_40_genes]
+
+# 2. ISI HARİTASI İÇİN ÖLÇEKLENDİRME (Z-Score: Her genin ortalaması=0, std=1)
+# KRİTİK: Scaler SADECE eğitim setinde fit edilir!
+heatmap_scaler = StandardScaler()
+X_train_top40_scaled_vals = heatmap_scaler.fit_transform(X_train_top40)
+
+X_train_top40_scaled = pd.DataFrame(
+    X_train_top40_scaled_vals,
+    index=X_train_top40.index,
+    columns=X_train_top40.columns
+)
+
+# 3. HASTA ETİKETLERİ VE RENK PALETİ
+# ALL hastaları Mavi, AML hastaları Kırmızı renk ile etiketlenir
+row_colors = y_train.map({'ALL': '#1f77b4', 'AML': '#d62728'})
+
+# 4. HİYERARŞİK KÜMELEME VE ISI HARİTASI (Clustermap)
+# Ward Metodu ve Euclidean Uzaklığı kullanılarak hiyerarşik ağaç (dendrogram) oluşturulur
+g = sns.clustermap(
+    X_train_top40_scaled,
+    method='ward',
+    metric='euclidean',
+    row_colors=row_colors,
+    cmap='vlag',              # Mavi (Düşük ifade) - Beyaz - Kırmızı (Yüksek ifade)
+    figsize=(14, 12),
+    dendrogram_ratio=(0.15, 0.15),
+    cbar_kws={'label': 'Z-Score (Log2 Expression)'},
+    linewidths=0.2,
+    col_cluster=True          # Genlerin kendi arasındaki hiyerarşik ilişkisini de kümele
+)
+
+# Grafik Başlığı ve Düzenleme (300 DPI)
+g.fig.suptitle(
+    "Eğitim Seti: En İyi 40 Ayırt Edici Gen - Hiyerarşik Kümeleme ve Isı Haritası\n"
+    "(Mavi: ALL Sınıfı | Kırmızı: AML Sınıfı)",
+    fontsize=14, fontweight='bold', y=1.03
+)
+
+# Lejant (Legend) Ekleme
+import matplotlib.patches as mpatches
+all_patch = mpatches.Patch(color='#1f77b4', label='ALL (Akut Lenfoblastik)')
+aml_patch = mpatches.Patch(color='#d62728', label='AML (Akut Miyeloid)')
+g.ax_heatmap.legend(handles=[all_patch, aml_patch], title="Gerçek Sınıflar", loc="upper right", bbox_to_anchor=(1.30, 1.25))
+
+plt.savefig("golub_top40_genes_clustermap_300dpi.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+#5 Eğitim ve bağımsız test setlerinin karşılaştırılması (batch etkisi) ve iki veri seti arasındaki dağılım farkları. 
+from sklearn.decomposition import PCA
+
+# 1. ÖZELLİK MATRİSLERİNİN ORTAK GENLER ÜZERİNDEN HİZALANMASI
+# Train ve Test setlerinin aynı gen sütunlarına sahip olduğundan emin oluyoruz
+common_genes = X_train_log2.columns.intersection(X_test_log2.columns)
+X_tr_aligned = X_train_log2[common_genes]
+X_te_aligned = X_test_log2[common_genes]
+
+print(f"--- 1. VERİ SETİ BOYUTLARI ---")
+print(f"Eğitim Seti Hizalanmış Boyut : {X_tr_aligned.shape}")
+print(f"Bağımsız Test Seti Hizalanmış: {X_te_aligned.shape}")
+
+# 2. İSTATİSTİKSEL DAĞILIM VE BATCH ETKİSİ TESTLERİ (Kolmogorov-Smirnov Testi)
+# Her bir gen için Train ve Test dağılımlarının aynı popülasyondan gelip gelmediğini test ediyoruz
+ks_p_values = []
+for gene in common_genes:
+    stat, p_val = stats.ks_2samp(X_tr_aligned[gene], X_te_aligned[gene])
+    ks_p_values.append(p_val)
+
+ks_p_values = np.array(ks_p_values)
+# Bonferroni düzeltmesi veya FDR ile anlamlı kayma gösteren gen oranı
+significantly_shifted_genes = (ks_p_values < 0.05).sum()
+
+print(f"\n--- 2. DAĞILIM KAYMASI (KOLMOGOROV-SMIRNOV) ANALİZİ ---")
+print(f"Train ve Test Arasında Dağılımı Anlamlı Düzeyde (p < 0.05) Farklı Olan Gen Sayısı: {significantly_shifted_genes} / {len(common_genes)} (%{100 * significantly_shifted_genes/len(common_genes):.2f})")
+
+# 3. ORTAK PCA PROJEKSİYONU (Batch Etkisi Görsel Kontrolü için)
+# KRİTİK: Scaler SADECE eğitim setinde fit edilir, test seti bu scaler ile dönüştürülür!
+scaler_batch = StandardScaler()
+X_tr_scaled = scaler_batch.fit_transform(X_tr_aligned)
+X_te_scaled = scaler_batch.transform(X_te_aligned)
+
+# PCA SADECE eğitim setinde fit edilir
+pca_batch = PCA(n_components=2, random_state=42)
+X_tr_pca_proj = pca_batch.fit_transform(X_tr_scaled)
+X_te_pca_proj = pca_batch.transform(X_te_scaled)
+
+# 4. GÖRSELLEŞTİRME (2x2 Panel - 300 DPI)
+# Panel 1: Gen Ekspresyon Ortalama Değerlerinin Karşılaştırması (Train vs Test)
+# Panel 2: Ortak PCA Uzayı (Train vs Test Batch Etkisi Göstergesi)
+# Panel 3: Kolmogorov-Smirnov p-değerleri Dağılım Histogramı
+# Panel 4: Hasta Bazlı Ortalama Ekspresyon Dağılımı (Boxplot / Violinplot)
+
+fig, axes = plt.subplots(2, 2, figsize=(16, 12), dpi=300)
+
+# Grafik 1: Ortalama Gen Ekspresyonu Karşılaştırması
+mean_tr_genes = X_tr_aligned.mean(axis=0)
+mean_te_genes = X_te_aligned.mean(axis=0)
+axes[0, 0].scatter(mean_tr_genes, mean_te_genes, alpha=0.5, color='purple', edgecolors='k', s=30)
+axes[0, 0].plot([mean_tr_genes.min(), mean_tr_genes.max()], [mean_tr_genes.min(), mean_tr_genes.max()], 'r--', label='İdeal Uyum (y=x)')
+axes[0, 0].set_title("1. Gen Bazında Ortalama İfade Karşılaştırması\n(Train vs Test)", fontsize=12, fontweight='bold', pad=10)
+axes[0, 0].set_xlabel("Eğitim Seti Ortalama Log2 İfadesi", fontsize=10)
+axes[0, 0].set_ylabel("Test Seti Ortalama Log2 İfadesi", fontsize=10)
+axes[0, 0].legend()
+axes[0, 0].grid(alpha=0.3)
+
+# Grafik 2: Ortak PCA Uzayı (Train ve Test Örneklerinin Dağılımı)
+axes[0, 1].scatter(X_tr_pca_proj[:, 0], X_tr_pca_proj[:, 1], color='#1f77b4', marker='o', s=70, label='Eğitim Seti (Train)', alpha=0.85, edgecolors='k')
+axes[0, 1].scatter(X_te_pca_proj[:, 0], X_te_pca_proj[:, 1], color='#ff7f0e', marker='^', s=75, label='Bağımsız Test Seti (Test)', alpha=0.85, edgecolors='k')
+axes[0, 1].set_title("2. Ortak PCA Uzayında Batch Etkisi Kontrolü\n(Eğitim Eksenlerine Göre Test İzdüşümü)", fontsize=12, fontweight='bold', pad=10)
+axes[0, 1].set_xlabel(f"Temel Bileşen 1 (PC1 - %{pca_batch.explained_variance_ratio_[0]*100:.1f})", fontsize=10)
+axes[0, 1].set_ylabel(f"Temel Bileşen 2 (PC2 - %{pca_batch.explained_variance_ratio_[1]*100:.1f})", fontsize=10)
+axes[0, 1].legend()
+axes[0, 1].grid(alpha=0.3)
+
+# Grafik 3: Kolmogorov-Smirnov p-değerleri Dağılımı
+sns.histplot(ks_p_values, bins=50, ax=axes[1, 0], color='teal', kde=True)
+axes[1, 0].axvline(0.05, color='crimson', linestyle='--', linewidth=1.5, label='Anlamlılık Eşiği (p = 0.05)')
+axes[1, 0].set_title("3. Gen Dağılım Farklılıkları (KS Test p-değerleri)\n(0.05 altı dağılımı kaymış genlerdir)", fontsize=12, fontweight='bold', pad=10)
+axes[1, 0].set_xlabel("Kolmogorov-Smirnov p-değeri", fontsize=10)
+axes[1, 0].set_ylabel("Gen Sayısı", fontsize=10)
+axes[1, 0].legend()
+axes[1, 0].grid(alpha=0.3)
+
+# Grafik 4: Hasta Bazlı Global İfade Dağılımı (Boxplot / Violin)
+sample_summary_df = pd.DataFrame({
+    'Ortalama_Ifade': pd.concat([X_tr_aligned.mean(axis=1), X_te_aligned.mean(axis=1)]),
+    'Set': ['Train (n=38)'] * len(X_tr_aligned) + ['Test (n=34)'] * len(X_te_aligned)
+})
+sns.boxplot(x='Set', y='Ortalama_Ifade', data=sample_summary_df, ax=axes[1, 1], palette=['#aec7e8', '#ffbb78'])
+sns.stripplot(x='Set', y='Ortalama_Ifade', data=sample_summary_df, ax=axes[1, 1], color='black', alpha=0.6, jitter=0.2, size=6)
+axes[1, 1].set_title("4. Hasta Bazlı Global İfade Seviyeleri Dağılımı\n(Train vs Test Medyan ve Çeyrekler)", fontsize=12, fontweight='bold', pad=10)
+axes[1, 1].set_xlabel("Veri Seti Bölümü", fontsize=10)
+axes[1, 1].set_ylabel("Hasta Ortalama Log2 İfadesi", fontsize=10)
+axes[1, 1].grid(axis='y', alpha=0.3)
+
+plt.tight_layout(pad=2.5)
+plt.subplots_adjust(hspace=0.35, wspace=0.25)
+plt.savefig("golub_train_test_batch_effect_analysis_300dpi.png", dpi=300, bbox_inches='tight')
 plt.show()
