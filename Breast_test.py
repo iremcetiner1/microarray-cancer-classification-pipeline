@@ -41,3 +41,8 @@ print(train_df["type"].value_counts())
 
 print("\n--- Test Seti Sınıf Dağılımı ---")
 print(test_df["type"].value_counts())
+
+#veri sızıntısı kontrol 
+assert len(train_df.index.intersection(test_df.index)) == 0
+assert len(train_df) + len(test_df) == len(base_df)
+print("\nTrain ve Test arasında indeks çakışması yok.")

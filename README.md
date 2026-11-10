@@ -5,22 +5,65 @@ End-to-end exploratory data analysis (EDA), statistical bioinformatics, and leak
 ---
 
 ## 📌 Proje Özeti ve Problem Tanımı
-Mikroarray gen ifade verileri, örneklem sayısının (n) öznitelik/gen sayısından (p) çok daha küçük olduğu (p>> n, *"Curse of Dimensionality"*) yüksek boyutlu biyomedikal verilerdir. Bu projede:
+Mikroarray gen ifade verileri, örneklem sayısının (n) öznitelik/gen sayısından (p) çok daha küçük olduğu (p>> n, *"Curse of Dimensionality"*) yüksek boyutlu biyomedikal verilerdir. 
+Bu projede:
 * **7.129 gen (öznitelik)** ve **72 hasta örneği** (38 Eğitim, 34 Bağımsız Test) incelenmiştir.
 * Ham floresan yoğunluklarındaki arka plan gürültüsü (negatif değerler), çarpık dağılımlar ve **Batch Etkisi (Eğitim vs. Test dağılım farkları)** analiz edilmiştir.
 ---
 
 ## 📂 Klasör Yapısı
+# 🧬 Microarray Cancer Classification Pipeline
+
+End-to-end exploratory data analysis (EDA), statistical bioinformatics, and leakage-free machine learning pipeline for high-dimensional microarray gene expression subtyping across multiple landmark cancer datasets:
+- **Leukemia (ALL vs. AML)** — *Golub et al. (1999)*
+- **Breast Cancer (Subtyping / GSE45827)**
+- **Colon Cancer**
+
+---
+
+## 📌 Proje Özeti ve Problem Tanımı
+Mikroarray gen ifade verileri, örneklem sayısının ($n$) öznitelik/gen sayısından ($p$) çok daha küçük olduğu ($p \gg n$, *"Curse of Dimensionality"*) yüksek boyutlu biyomedikal verilerdir. Bu depoda farklı kanser türleri üzerinde:
+- Ham floresan yoğunluklarındaki arka plan gürültüsü, çarpık dağılımlar ve **Batch Etkisi (Eğitim vs. Test dağılım farkları)** analiz edilmiştir.
+- Boyut indirgeme (**PCA, t-SNE, UMAP**), istatistiksel diferansiyel gen ekspresyonu (**Welch t-testi, ANOVA, Benjamini-Hochberg FDR**) ve makine öğrenmesi modelleme adımları uygulanmıştır.
+- Analiz sonuçları yüksek çözünürlüklü (300 DPI) grafikler ve kümeleme ısı haritaları (**Clustermap**) ile görselleştirilmiştir.
+
+---
+
+## 📂 Klasör Yapısı
+```text
 microarray-cancer-classification-pipeline/
 │
-├── golub-data-set/
-│   ├── data_set_ALL_AML_train.csv         # Eğitim seti (38 hasta x 7129 gen + call sütunları)
-│   ├── data_set_ALL_AML_independent.csv   # Bağımsız test seti (34 hasta x 7129 gen + call sütunları)
-│   └── actual.csv                         # Hasta ID (1-72) ve gerçek kanser alt tipi etiketleri (ALL / AML)
+├── breast-data-set/
+│   ├── Breast_en_iyi_50_gen_ANOVA.csv         # ANOVA ile belirlenen en ayırt edici 50 gen
+│   ├── Breast_GSE45827.csv                    # Birleştirilmiş GSE45827 veri seti
+│   ├── train_GSE45827.csv                     # Meme kanseri eğitim seti
+│   └── test_GSE45827.csv                      # Meme kanseri test seti
 │
-├── Golub_EDA_DataAnalysis.py              # Uçtan uca EDA, İstatistiksel Testler ve Modelleme betiği
-├── requirements.txt                       # Gerekli Python kütüphaneleri (opsiyonel)
-└── README.md                              # Proje dokümantasyonu ve çalıştırma rehberi
+├── golub-data-set/
+│   ├── data_set_ALL_AML_train.csv             # Golub eğitim seti (38 hasta x 7129 gen)
+│   ├── data_set_ALL_AML_independent.csv       # Golub bağımsız test seti (34 hasta x 7129 gen)
+│   └── actual.csv                             # Golub hasta ID ve kanser alt tipi etiketleri (ALL / AML)
+│
+├── .gitignore
+├── about_GolubDataSet.py                      # Golub veri seti yapısal özet ve keşif betiği
+├── Golub_EDA_DataAnalysis.py                  # Golub (Lösemi) uçtan uca EDA ve modelleme betiği
+├── Breast_EDA_DataAnalysis.py                 # Meme Kanseri (GSE45827) EDA ve istatistik analiz betiği
+├── Breast_test.py                             # Meme Kanseri modelleme/test değerlendirme betiği
+├── Colon_EDA_DataAnalysis.py                  # Kolon Kanseri EDA ve diferansiyel analiz betiği
+│
+├── Breast_batch_etkisi_analizi.png            # Meme kanseri batch etkisi dağılım grafikleri
+├── Breast_boyut_indirgeme_analizi.png         # Meme kanseri PCA / t-SNE / UMAP projeksiyonları
+├── Breast_log_donusumu_karsilastirma.png      # Meme kanseri log dönüşüm öncesi/sonrası dağılımı
+├── Breast_sinif_dagilimi_train_vs_test.png    # Eğitim ve test setleri sınıf dağılımları
+├── Breast_top6_gen_kutu_grafigi.png           # En belirteç 6 genin alt tiplere göre kutu grafikleri
+├── Breast_top35_gen_clustermap.png            # En ayırt edici 35 genin hiyerarşik kümeleme ısı haritası
+│
+├── golub_on_isleme_ve_log2_karsilastirma_300dpi.png # Golub kırpma ve log dönüşümü karşılaştırması
+├── golub_pca_tsne_umap_300dpi.png                  # Golub boyut indirgeme (PCA, t-SNE, UMAP)
+├── golub_top40_genes_cluster_map_300dpi.png        # Golub en ayırt edici 40 gen clustermap
+├── golub_train_test_batch_effect_analysis_300dpi.png # Golub KS-testi ve batch etkisi analizi
+│
+└── README.md                                  # Proje dokümantasyonu ve çalıştırma rehberi
 ```
 
 ---
@@ -83,3 +126,6 @@ Ana dizinde `golub-data-set` klasörünün bulunduğundan ve içinde şu 3 dosya
 Ana Python betiğini çalıştırın:
 ```bash
 python Golub_EDA_DataAnalysis.py
+
+Aynı adımları Breast-data-set için de uygulayıp
+Önce Brest_test.py ardından Golub_EDA_DataAnalysis.py çalıştırılmalıdır.

@@ -75,7 +75,6 @@ print(
 )
 
 # 3 & 4. check column and alignment
-# 3 & 4. check column and alignment
 print("\n[3 & 4] SÜTUN VE ETİKET EŞLEŞTİRME KONTROLÜ:")
 cols_match = (X_train.columns == X_test.columns).all()
 index_aligned = (X_train.index == y_train.index).all() and (X_test.index == y_test.index).all()
@@ -116,7 +115,7 @@ sns.countplot(
     palette={"Train": "royalblue", "Test": "darkorange"},
     ax=axes[0]
 )
-axes[0].set_title("Train vs Test Sınıf Dağılımı (Örnek Sayısı)")
+axes[0].set_title(" Breast Train vs Test Sınıf Dağılımı (Örnek Sayısı)")
 axes[0].set_xlabel("Kanser Alt Tipi")
 axes[0].set_ylabel("Örnek Sayısı (Adet)")
 axes[0].tick_params(axis="x", rotation=30)
@@ -140,7 +139,7 @@ sns.barplot(
     palette={"Train (%)": "royalblue", "Test (%)": "darkorange"},
     ax=axes[1]
 )
-axes[1].set_title("Train vs Test Sınıf Dağılımı (Yüzdelik Oran %)")
+axes[1].set_title("Breast Train vs Test Sınıf Dağılımı (Yüzdelik Oran %)")
 axes[1].set_xlabel("Kanser Alt Tipi")
 axes[1].set_ylabel("Oran (%)")
 axes[1].tick_params(axis="x", rotation=30)
@@ -159,7 +158,7 @@ val_mean, val_median, val_std = np.mean(X_train.values), np.median(X_train.value
 t_min, t_max = np.min(X_test.values), np.max(X_test.values)
 t_mean, t_median, t_std = np.mean(X_test.values), np.median(X_test.values), np.std(X_test.values)
 
-print(f"\nGen Ekspresyon Değerleri Özeti:")
+print(f"\nBreast Gen Ekspresyon Değerleri Özeti:")
 print(
     f" - TRAIN -> Min: {val_min:.4f} | Max: {val_max:.4f} | Medyan: {val_median:.4f} | Ortalama: {val_mean:.4f} | Std: {val_std:.4f}"
 )
@@ -249,7 +248,7 @@ ax1.plot(range(1, n_components + 1), cum_var, marker="o", color="darkred")
 ax1.axhline(
     y=80, color="gray", linestyle="--", label="%80 Açıklanan Varyans Eşiği"
 )
-ax1.set_title("PCA Açıklanan Kümülatif Varyans (Scree Plot)")
+ax1.set_title("Breast PCA Açıklanan Kümülatif Varyans (Scree Plot)")
 ax1.set_xlabel("Bileşen Sayısı")
 ax1.set_ylabel("Kümülatif Varyans (%)")
 ax1.grid(True, alpha=0.3)
@@ -333,7 +332,7 @@ sig_fdr_001 = (deg_df["FDR_q_degeri"] < 0.01).sum()
 print(f" - Toplam İncelenen Gen Probu Sayısı : {len(gene_cols)}")
 print(f" - Anlamlı Gen Sayısı (FDR < 0.05)   : {sig_fdr_005} (%{sig_fdr_005 / len(gene_cols) * 100:.2f})")
 print(f" - Anlamlı Gen Sayısı (FDR < 0.01)   : {sig_fdr_001} (%{sig_fdr_001 / len(gene_cols) * 100:.2f})")
-print("\nEn Ayırt Edici İlk 10 Gen Probu:")
+print("\n BreastEn Ayırt Edici İlk 10 Gen Probu:")
 print(deg_df.head(10).to_string(index=False))
 
 # Tabloyu CSV olarak kaydet
@@ -375,7 +374,7 @@ cg = sns.clustermap(
 cg.ax_heatmap.set_xlabel("Örnekler (Samples)", fontsize=11)
 cg.ax_heatmap.set_ylabel(f"En Ayırt Edici {top_k} Gen Probu", fontsize=11)
 cg.fig.suptitle(
-    f"En Ayırt Edici {top_k} Gen İçin Hiyerarşik Kümeleme ve Isı Haritası (Z-Skor)",
+    f"Breast En Ayırt Edici {top_k} Gen İçin Hiyerarşik Kümeleme ve Isı Haritası (Z-Skor)",
     y=1.02,
     fontsize=14,
     fontweight="bold"
@@ -417,7 +416,7 @@ for idx, gene in enumerate(top_6_genes):
     axes[idx].tick_params(axis="x", rotation=30)
     axes[idx].grid(True, alpha=0.3)
 
-plt.suptitle("En Yüksek ANOVA F-Skoruna Sahip İlk 6 Genin Sınıflara Göre İfade Dağılımı", fontsize=14, fontweight="bold")
+plt.suptitle("BREAST En Yüksek ANOVA F-Skoruna Sahip İlk 6 Genin Sınıflara Göre İfade Dağılımı", fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.savefig(os.path.join("Breast_top6_gen_kutu_grafigi.png"), dpi=300)
 plt.show()
@@ -528,7 +527,7 @@ axes[1, 1].set_xlabel("Veri Seti")
 axes[1, 1].set_ylabel("Örnek Medyan Ekspresyon Değeri")
 axes[1, 1].grid(True, alpha=0.3)
 
-plt.suptitle("Eğitim (Train) ve Bağımsız Test Setlerinin Dağılım ve Batch Etkisi Analizi", fontsize=15, fontweight="bold")
+plt.suptitle("Breast Eğitim ve Bağımsız Test Setlerinin Dağılım ve Batch Etkisi Analizi", fontsize=15, fontweight="bold")
 plt.tight_layout()
 plt.savefig(os.path.join( "Breast_batch_etkisi_analizi.png"), dpi=300)
 plt.show()
