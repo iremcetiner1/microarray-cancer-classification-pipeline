@@ -5,30 +5,23 @@ import pandas as pd
 import seaborn as sns
 from scipy import stats
 from sklearn.model_selection import train_test_split
-
-# 1. Klasör ve dosya yolu ayarları
+#file import
 dataset_dir = "breast-data-set"
 input_path = os.path.join(dataset_dir, "Breast_GSE45827.csv")
-
-# 2. Veri setini yükleme
 print("Veri seti yükleniyor...")
 base_df = pd.read_csv(input_path)
 
-# 3. Train (%80) ve Test (%20) olarak sınıf oranlarını koruyarak (Stratified) ayırma
+# sınıf oranlarını koruyarak ayırım - Train (%80) ve Test (%20) 
 train_df, test_df = train_test_split(
     base_df, test_size=0.20, random_state=42, stratify=base_df["type"]
 )
-
-# 4. Kayıt yolları
+#dosyaları csv olarak kaydet
 train_path = os.path.join(dataset_dir, "train_GSE45827.csv")
 test_path = os.path.join(dataset_dir, "test_GSE45827.csv")
-
-# 5. Dosyaları CSV olarak diske yazma
 print("Dosyalar diske yazılıyor...")
 train_df.to_csv(train_path, index=False)
 test_df.to_csv(test_path, index=False)
-
-# 6. Diske yazılma doğrulaması
+#check
 train_saved = os.path.exists(train_path)
 test_saved = os.path.exists(test_path)
 
